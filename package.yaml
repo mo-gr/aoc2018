@@ -1,0 +1,38 @@
+name: AOC
+version: '1.0'
+license: AllRightsReserved
+dependencies:
+- containers
+- base
+- parsec
+- hourglass
+- vector
+- mtl
+executables:
+  AOC:
+    main: Main.hs
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O2
+    other-modules:
+      AOC1
+data-files:
+- AOC18.input
+- AOC4.input
+- AOC5.input
+- AOC8.input
+- AOC6.input
+- AOC16.input
+- AOC25.input
+- AOC12.input
+- AOC10.input
+- AOC19.input
+- AOC1.input
+- AOC2.input
+- AOC3.input
+- AOC7.input
+- AOC24.input
+- example.txt
+stability: experimental
