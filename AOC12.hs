@@ -1,11 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module AOC12 where
-  
-import Text.Parsec.ByteString (Parser, parseFromFile)  
-import Text.Parsec
-import Data.List
-import Data.Monoid
-import Data.Maybe
+
+import           Data.List
+import           Data.Maybe
+import           Data.Monoid
+import           Text.Parsec
+import           Text.Parsec.ByteString (Parser, parseFromFile)
 
 --input = fromRight mempty <$> parseFromFile (inputParser) "example.txt"
 input = fromRight mempty <$> parseFromFile (inputParser) "AOC12.input"
@@ -14,21 +15,26 @@ fromRight :: b -> Either a b -> b
 fromRight _ (Right b) = b
 fromRight b _         = b
 
-data PlantState = Alive | Dead deriving (Eq)
+data PlantState
+  = Alive
+  | Dead
+  deriving (Eq)
 
 instance Show PlantState where
   show Alive = "#"
-  show Dead = "."
+  show Dead  = "."
 
-newtype Plants = Plants { unPlants :: [PlantState] } deriving (Eq, Monoid)
+newtype Plants = Plants
+  { unPlants :: [PlantState]
+  } deriving (Eq, Monoid)
 
 instance Show Plants where
   show (Plants state) = mconcat $ show <$> state
 
-data Rule = Rule {
-  constellation :: [PlantState],
-  result :: PlantState
-} deriving (Show, Eq)
+data Rule = Rule
+  { constellation :: [PlantState]
+  , result        :: PlantState
+  } deriving (Show, Eq)
 
 aliveParser :: Parser PlantState
 aliveParser = string "#" *> return Alive
@@ -61,24 +67,36 @@ rightPad :: [PlantState] -> [PlantState]
 rightPad p = p <> cycle [Dead]
 
 tick :: [Rule] -> Plants -> Plants
-tick rules (Plants plants) = Plants $ take (length plants) $
- [Dead, Dead] <> ((applyRules rules) <$> zip5 plants 
-                                  (drop 1 $ rightPad plants)
-                                  (drop 2 $ rightPad plants)
-                                  (drop 3 $ rightPad plants)
-                                  (drop 4 $ rightPad plants))
+tick rules (Plants plants) =
+  Plants $
+  take (length plants) $
+  [Dead, Dead] <>
+  ((applyRules rules) <$>
+   zip5
+     plants
+     (drop 1 $ rightPad plants)
+     (drop 2 $ rightPad plants)
+     (drop 3 $ rightPad plants)
+     (drop 4 $ rightPad plants))
 
-applyRules :: [Rule] -> (PlantState,PlantState,PlantState,PlantState,PlantState) -> PlantState
-applyRules rules (a,b,c,d,e) = fromMaybe Dead $
-  find ((== [a,b,c,d,e]).constellation) rules >>= pure.result
+applyRules ::
+     [Rule]
+  -> (PlantState, PlantState, PlantState, PlantState, PlantState)
+  -> PlantState
+applyRules rules (a, b, c, d, e) =
+  fromMaybe Dead $
+  find ((== [a, b, c, d, e]) . constellation) rules >>= pure . result
 
 plantValue :: Plants -> Int
-plantValue (Plants plants) = sum $ fst <$> filter ((== Alive).snd) (zip [(paddingCount * (-1))..] plants)
+plantValue (Plants plants) =
+  sum $
+  fst <$> filter ((== Alive) . snd) (zip [(paddingCount * (-1)) ..] plants)
 
 paddingCount = 20
-generations = 20
---generations = 50000000000
 
+generations = 20
+
+--generations = 50000000000
 --3494
 solution1 = do
   (initial, rules) <- input
@@ -87,8 +105,3 @@ solution1 = do
   let live = iterate (tick rules) world
   --sequence $ putStrLn.show <$> zip [0..] (take 21 $ live)
   pure $ plantValue . head $ drop generations live
-
-
-
-
-
