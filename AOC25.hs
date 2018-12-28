@@ -99,8 +99,8 @@ filterSubSets' orig (a:aa) =
     Nothing -> a : filterSubSets' orig aa
     Just _  -> filterSubSets' orig aa
 
-mergeConstellations :: [Constellation] -> IO [Constellation]
-mergeConstellations = untilStable' mergeConstellations'
+mergeConstellations :: [Constellation] -> [Constellation]
+mergeConstellations = untilStable mergeConstellations'
 
 mergeConstellations' :: [Constellation] -> [Constellation]
 mergeConstellations' cs =
@@ -129,6 +129,5 @@ mergeConstellations' cs =
 solution1 = do
   stars <- fromRight <$> input
   let cs = Data.List.foldl assignConstellation [] stars
-  mcs <- mergeConstellations cs
-  print $ length cs
+      mcs = mergeConstellations cs
   pure $ length mcs
