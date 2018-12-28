@@ -1,8 +1,8 @@
 module Main where
 
-import qualified AOC1 as AOC1
+import qualified AOC25 as AOC25
 
 main = do
   print "Advent of Code"
-  AOC1.main >>= print
+  AOC25.solution1 >>= print
   

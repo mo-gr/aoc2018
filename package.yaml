@@ -17,7 +17,7 @@ executables:
       - -with-rtsopts=-N
       - -O2
     other-modules:
-      AOC1
+      AOC25
 data-files:
 - AOC18.input
 - AOC4.input
