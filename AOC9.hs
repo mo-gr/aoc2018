@@ -16,7 +16,7 @@ singleCircle :: a -> ST s (STCircleNode s a)
 singleCircle v = do
   p <- newSTRef undefined
   n <- newSTRef undefined
-  self <- pure $ STCircleNode v p n
+  let self = STCircleNode v p n
   writeSTRef n self
   writeSTRef p self
   return self
@@ -77,7 +77,7 @@ replaceIndex n f l =
    in before ++ [f it] ++ after
 
 isMagic :: Marble -> Bool
-isMagic m = 0 == (fromEnum m) `mod` 23
+isMagic m = 0 == fromEnum m `mod` 23
 
 isFinished :: GameState s -> ST s Bool
 isFinished (GameState _ [] _ _) = pure True
@@ -93,7 +93,7 @@ gameRound g
     pure $
       g
         { remainingMarbles = drop 1 $ remainingMarbles g
-        , currentPlayer = (succ $ currentPlayer g) `mod` (length $ scores g)
+        , currentPlayer = succ (currentPlayer g) `mod` length (scores g)
         , currentMarble = currentMarble'
         , scores = replaceIndex (currentPlayer g) (+ price) (scores g)
         }
@@ -104,7 +104,7 @@ gameRound g = do
   pure $
     g
       { remainingMarbles = drop 1 $ remainingMarbles g
-      , currentPlayer = (succ $ currentPlayer g) `mod` (length $ scores g)
+      , currentPlayer = succ (currentPlayer g) `mod` length (scores g)
       , currentMarble = currentMarble'
       }
 
