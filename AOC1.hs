@@ -54,11 +54,18 @@ detectDoubleFreq seen f (op:ops) =
         True  -> pure f'
         False -> detectDoubleFreq (insert f' seen) f' ops
 
-main = do
+--561
+solution1 :: IO Frequency
+solution1 = do
   ops <- parseFromFile parseOp "AOC1.input"
-  f <-
-    pure $
-    case ops of
-      Right o -> runReader (detectDoubleFreq empty (Frequency 0) o) o
-      Left _  -> Frequency 0
-  pure f
+  case ops of
+    Right o -> pure $ foldOps (Frequency 0) o
+    Left e  -> error $ show e
+
+--563
+solution2 :: IO Frequency
+solution2 = do
+  ops <- parseFromFile parseOp "AOC1.input"
+  case ops of
+    Right o -> pure $ runReader (detectDoubleFreq empty (Frequency 0) o) o
+    Left e  -> error $ show e
