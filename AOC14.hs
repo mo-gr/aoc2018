@@ -43,7 +43,9 @@ search target score c =
         else search target (V.tail score) (succ c)
 
 -- 3147574107
+solution1 :: IO String
 solution1 = do
+  putStrLn "Warning: This will take a bit"
   let scoreBoard = start
       elves = (0, 1)
       kitchen = (scoreBoard, elves)
@@ -54,6 +56,7 @@ solution1 = do
 
 -- WRONG: 1300565 too low
 -- WRONG: 13032973 too low
+solution2 :: IO Int
 solution2 = do
   let scoreBoard = start
       elves = (0, 1)

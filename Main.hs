@@ -11,6 +11,7 @@ import qualified AOC7
 import qualified AOC8
 import qualified AOC9
 import qualified AOC12
+import qualified AOC14
 import           System.Environment
 import           System.Exit
 
@@ -41,5 +42,6 @@ main = do
     Just "9"   -> format AOC9.solution1 AOC9.solution2
     Just "10"  -> putStrLn "This solution uses SpriteKit and thus requires Haskell for Mac (http://haskellformac.com). Just put the source and input in a new project and write 'solution1' or 'solution2' in the playground."
     Just "12"   -> format AOC12.solution1 (pure "not solved")
+    Just "14"   -> format AOC14.solution1 (pure "not solved")
     Just "25"  -> AOC25.solution1 >>= print
     Just other -> putStrLn $ "No sulution for day " ++ show other
