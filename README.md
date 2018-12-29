@@ -14,6 +14,7 @@ stack run AOC <number of task>
 
 The tool expects the input files (part of this repository) to be in the current working directory. Otherwise it will just fail hard.
 
+Many tasks have a code level switch (basically comment one `parseFromFile` line and uncomment the other) to load input from `example.txt`. Just fill this one with a simpler or custom input if you want to experiment. This was very helpful for repl/playground style development.
 
 # License
 
