@@ -1,17 +1,10 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveFoldable             #-}
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveTraversable          #-}
-
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-{-# LANGUAGE MultiParamTypeClasses      #-}
-
--- based on ideas from https://www.reddit.com/r/haskell/comments/a2vnni/a_better_comonad_for_cellular_automata/
 module AOC18 where
 
 import           Data.Foldable
 import           Data.Functor
+import           Data.Maybe
 import           Data.Sequence          as S
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
@@ -62,20 +55,27 @@ data Point =
 
 newtype World a =
   World (S.Seq (S.Seq a))
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Show)
 
 makeOpenWorld :: World Tile
 makeOpenWorld = World $ S.replicate worldSize (S.replicate worldSize Open)
 
+peek :: Point -> World a -> a
 peek (Point x y) (World w) =
-  let t = S.index (S.index w (fromIntegral y)) (fromIntegral x)
+  let r = fromMaybe undefined (w !? fromIntegral y)
+      t = fromMaybe undefined (r !? fromIntegral x)
    in t
 
-evolve rule world =
+evolve :: (Point -> World a -> a) -> World a -> World a
+evolve rule world@(World w) =
   World $
-  S.fromFunction worldSize $ \row ->
-    S.fromFunction worldSize $ \col ->
-      rule (Point (CoordX col) (CoordY row)) world
+  S.mapWithIndex
+    (\rowIndex row ->
+       S.mapWithIndex
+         (\colIndex col ->
+            rule (Point (CoordX colIndex) (CoordY rowIndex)) world)
+         row)
+    w
 
 ruleSet :: Point -> World Tile -> Tile
 ruleSet p w =
@@ -117,10 +117,13 @@ render :: World Tile -> IO ()
 render (World w) =
   sequence_ $ putStrLn . (\line -> mconcat (show <$> toList line)) <$> w
 
+worldToList :: World Tile -> [Tile]
+worldToList (World r) = mconcat $ toList <$> toList r
+
 value :: World Tile -> Int
 value w =
-  let treeCount = Prelude.length $ Prelude.filter (== Tree) (toList w)
-      lumberCount = Prelude.length $ Prelude.filter (== Lumber) (toList w)
+  let treeCount = Prelude.length $ Prelude.filter (== Tree) (worldToList w)
+      lumberCount = Prelude.length $ Prelude.filter (== Lumber) (worldToList w)
    in treeCount * lumberCount
 
 worldSize :: Int
