@@ -1,5 +1,6 @@
 module AOC8 where
 
+import           Data.Functor
 import           Data.List
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
@@ -34,9 +35,7 @@ nodeParser = do
   pure $ Node metadata children
 
 licenseFileParser :: Parser Node
-licenseFileParser = do
-  root <- nodeParser
-  pure root
+licenseFileParser = nodeParser
 
 sumOfMeta :: Node -> Int
 sumOfMeta (Node m []) = sum m
@@ -48,14 +47,14 @@ value (Node m c) = sum $ findReferenced <$> m
   where
     findReferenced :: Int -> Int
     findReferenced m =
-      sum $ value <$> snd <$> filter ((== m) . fst) (zip [1 ..] c)
+      sum $ value . snd <$> filter ((== m) . fst) (zip [1 ..] c)
 
 --36627
 solution1 = do
   parseResult <- input
   license <-
     case parseResult of
-      Left e  -> print e *> pure emptyNode
+      Left e  -> print e Data.Functor.$> emptyNode
       Right l -> pure l
   pure $ sumOfMeta license
 
@@ -64,6 +63,6 @@ solution2 = do
   parseResult <- input
   license <-
     case parseResult of
-      Left e  -> print e *> pure emptyNode
+      Left e  -> print e Data.Functor.$> emptyNode
       Right l -> pure l
   pure $ value license
