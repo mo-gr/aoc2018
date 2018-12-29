@@ -36,6 +36,9 @@ newtype Polymer =
   Polymer [Unit]
   deriving (Eq, Show)
 
+instance Semigroup Polymer where
+  (<>) = mappend
+
 instance Monoid Polymer where
   mempty = Polymer []
   mappend (Polymer p) (Polymer p') = Polymer (mappend p p')
@@ -70,7 +73,7 @@ reactRound (Polymer units) = Polymer <$> foldr reaction (False, []) units
     reaction :: Unit -> (Reacted, [Unit]) -> (Reacted, [Unit])
     reaction u (r, []) = (r, [u])
        --reaction u (True, us) = (True, u:us)
-    reaction u (reacted, (u':us)) =
+    reaction u (reacted, u':us) =
       if reacts u u'
         then (True, us)
         else (reacted, u : u' : us)
@@ -82,16 +85,18 @@ react (True, p)  = react $ reactRound p
 filterP :: Polymer -> (Unit -> Bool) -> Polymer
 filterP (Polymer us) p = Polymer $ filter p us
 
+-- 10888
 solution1 = do
   polymer <- input
   let reduced = react (True, polymer)
   pure $ unitCount reduced
 
+-- 6952
 solution2 = do
   polymer <- input
   let candidates = hardTypeFilter <$> ['a' .. 'z']
   let ps =
         zip ['a' .. 'z'] $
-        unitCount . react . ((,) True) . filterP polymer <$> candidates
+        unitCount . react . (,) True . filterP polymer <$> candidates
   let badPolymer = snd . head . sortOn snd $ ps
   pure badPolymer
