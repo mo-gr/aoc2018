@@ -3,6 +3,7 @@ module AOC16 where
 import           Data.Bits
 import           Data.Int
 import           Data.List
+import           Data.Maybe
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
@@ -81,9 +82,7 @@ opCode MULR = 2
 
 byOpCode :: OpCode -> Op
 byOpCode opc =
-  case find (\op -> opCode op == opc) ops of
-    Nothing -> error $ "Unknown opcode: " ++ show opc
-    Just o  -> o
+  fromMaybe (error $ "Unknown opcode: " ++ show opc) $ find (\op -> opCode op == opc) ops
 
 regAccess :: CPU -> Register -> Register
 regAccess c 0 = regA c
@@ -98,46 +97,44 @@ regWrite c 2 = \r -> c {regC = r}
 regWrite c 3 = \r -> c {regD = r}
 
 instruct :: CPU -> Op -> Register -> Register -> Register -> CPU
-instruct cpu ADDR a b c = regWrite cpu c $ (regAccess cpu a) + (regAccess cpu b)
-instruct cpu ADDI a b c = regWrite cpu c $ (regAccess cpu a) + b
-instruct cpu MULR a b c = regWrite cpu c $ (regAccess cpu a) * (regAccess cpu b)
-instruct cpu MULI a b c = regWrite cpu c $ (regAccess cpu a) * b
-instruct cpu BANR a b c =
-  regWrite cpu c $ (regAccess cpu a) .&. (regAccess cpu b)
-instruct cpu BANI a b c = regWrite cpu c $ (regAccess cpu a) .&. b
-instruct cpu BORR a b c =
-  regWrite cpu c $ (regAccess cpu a) .|. (regAccess cpu b)
-instruct cpu BORI a b c = regWrite cpu c $ (regAccess cpu a) .|. b
-instruct cpu SETR a _ c = regWrite cpu c $ (regAccess cpu a)
-instruct cpu SETI a _ c = regWrite cpu c $ a
+instruct cpu ADDR a b c = regWrite cpu c $ regAccess cpu a + regAccess cpu b
+instruct cpu ADDI a b c = regWrite cpu c $ regAccess cpu a + b
+instruct cpu MULR a b c = regWrite cpu c $ regAccess cpu a * regAccess cpu b
+instruct cpu MULI a b c = regWrite cpu c $ regAccess cpu a * b
+instruct cpu BANR a b c = regWrite cpu c $ regAccess cpu a .&. regAccess cpu b
+instruct cpu BANI a b c = regWrite cpu c $ regAccess cpu a .&. b
+instruct cpu BORR a b c = regWrite cpu c $ regAccess cpu a .|. regAccess cpu b
+instruct cpu BORI a b c = regWrite cpu c $ regAccess cpu a .|. b
+instruct cpu SETR a _ c = regWrite cpu c (regAccess cpu a)
+instruct cpu SETI a _ c = regWrite cpu c a
 instruct cpu GTIR a b c =
   regWrite cpu c $
-  if (a > (regAccess cpu b))
+  if a > regAccess cpu b
     then 1
     else 0
 instruct cpu GTRI a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) > b)
+  if regAccess cpu a > b
     then 1
     else 0
 instruct cpu GTRR a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) > (regAccess cpu b))
+  if regAccess cpu a > regAccess cpu b
     then 1
     else 0
 instruct cpu EQIR a b c =
   regWrite cpu c $
-  if (a == (regAccess cpu b))
+  if a == regAccess cpu b
     then 1
     else 0
 instruct cpu EQRI a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) == b)
+  if regAccess cpu a == b
     then 1
     else 0
 instruct cpu EQRR a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) == (regAccess cpu b))
+  if regAccess cpu a == regAccess cpu b
     then 1
     else 0
 
@@ -153,12 +150,12 @@ candidates' cpu cpu' (opc, a, b, c) =
   [(op, opc) | op <- ops, instruct cpu op a b c == cpu']
 
 -- Parser Stuff
-input = parseFromFile (inputParser) "AOC16.input"
+input = parseFromFile inputParser "AOC16.input"
 
 inputParser :: Parser ([Example], Program)
 inputParser = do
-  ex <- (many exampleParser)
-  program <- (many instructionParser)
+  ex <- many exampleParser
+  program <- many instructionParser
   pure (ex, program)
 
 instructionParser :: Parser Instruction
@@ -167,7 +164,7 @@ instructionParser = do
   a <- fromIntegral <$> number
   b <- fromIntegral <$> number
   c <- fromIntegral <$> number
-  pure $ (op, a, b, c)
+  pure (op, a, b, c)
 
 type Example = (CPU, CPU, Instruction)
 
@@ -196,11 +193,11 @@ exampleParser = do
   return (inputCpu, outputCpu, (op, a, b, c))
 
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f = \(a, b, c) -> f a b c
+uncurry3 f (a, b, c) = f a b c
 
 verify :: [Example] -> IO ()
 verify [] = print "All good"
-verify ((c, c', i):more) = do
+verify ((c, c', i):more) =
   if instruct' c i == c'
     then verify more
     else print $ "Broken: " ++ show c ++ show i ++ " =/=> " ++ show c'
@@ -212,7 +209,7 @@ solution1 = do
         case examplesOrError of
           Left err      -> error $ show err
           Right (ex, _) -> ex
-  let exCandidates = (uncurry3 candidates) <$> examples
+  let exCandidates = uncurry3 candidates <$> examples
   pure $ length $ filter ((>= 3) . length) exCandidates
 
 findOpCodes = do
@@ -221,11 +218,11 @@ findOpCodes = do
         case examplesOrError of
           Left err      -> error $ show err
           Right (ex, _) -> ex
-  let exCandidates = (uncurry3 candidates') <$> examples
+  let exCandidates = uncurry3 candidates' <$> examples
   print $ nub $ filter ((== 9) . length) exCandidates
 
 -- 115 too low
--- 2
+-- 627
 solution2 = do
   programOrError <- input
   let (e, p) =
@@ -233,6 +230,6 @@ solution2 = do
           Left err            -> error $ show err
           Right (ex, program) -> (ex, program)
   verify e
-  print $ last p
+  --print $ last p
   let cpu0 = CPU 0 0 0 0
-  pure $ foldl instruct' cpu0 $ p
+  pure . regA $ foldl instruct' cpu0 p
