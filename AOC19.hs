@@ -4,6 +4,7 @@ import           Data.Bits
 import           Data.Char
 import           Data.Int
 import           Data.List
+import           Data.Maybe
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
@@ -85,9 +86,8 @@ opCode MULR = 2
 
 byOpCode :: OpCode -> Op
 byOpCode opc =
-  case find (\op -> opCode op == opc) ops of
-    Nothing -> error $ "Unknown opcode: " ++ show opc
-    Just o  -> o
+  fromMaybe (error $ "Unknown opcode: " ++ show opc) $
+  find (\op -> opCode op == opc) ops
 
 regAccess :: CPU -> Register -> Register
 regAccess c 0 = regA c
@@ -106,54 +106,52 @@ regWrite c 4 = \r -> c {regE = r}
 regWrite c 5 = \r -> c {regF = r}
 
 instruct :: CPU -> Op -> Register -> Register -> Register -> CPU
-instruct cpu ADDR a b c = regWrite cpu c $ (regAccess cpu a) + (regAccess cpu b)
-instruct cpu ADDI a b c = regWrite cpu c $ (regAccess cpu a) + b
-instruct cpu MULR a b c = regWrite cpu c $ (regAccess cpu a) * (regAccess cpu b)
-instruct cpu MULI a b c = regWrite cpu c $ (regAccess cpu a) * b
-instruct cpu BANR a b c =
-  regWrite cpu c $ (regAccess cpu a) .&. (regAccess cpu b)
-instruct cpu BANI a b c = regWrite cpu c $ (regAccess cpu a) .&. b
-instruct cpu BORR a b c =
-  regWrite cpu c $ (regAccess cpu a) .|. (regAccess cpu b)
-instruct cpu BORI a b c = regWrite cpu c $ (regAccess cpu a) .|. b
-instruct cpu SETR a _ c = regWrite cpu c $ (regAccess cpu a)
-instruct cpu SETI a _ c = regWrite cpu c $ a
+instruct cpu ADDR a b c = regWrite cpu c $ regAccess cpu a + regAccess cpu b
+instruct cpu ADDI a b c = regWrite cpu c $ regAccess cpu a + b
+instruct cpu MULR a b c = regWrite cpu c $ regAccess cpu a * regAccess cpu b
+instruct cpu MULI a b c = regWrite cpu c $ regAccess cpu a * b
+instruct cpu BANR a b c = regWrite cpu c $ regAccess cpu a .&. regAccess cpu b
+instruct cpu BANI a b c = regWrite cpu c $ regAccess cpu a .&. b
+instruct cpu BORR a b c = regWrite cpu c $ regAccess cpu a .|. regAccess cpu b
+instruct cpu BORI a b c = regWrite cpu c $ regAccess cpu a .|. b
+instruct cpu SETR a _ c = regWrite cpu c (regAccess cpu a)
+instruct cpu SETI a _ c = regWrite cpu c a
 instruct cpu GTIR a b c =
   regWrite cpu c $
-  if (a > (regAccess cpu b))
+  if a > regAccess cpu b
     then 1
     else 0
 instruct cpu GTRI a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) > b)
+  if regAccess cpu a > b
     then 1
     else 0
 instruct cpu GTRR a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) > (regAccess cpu b))
+  if regAccess cpu a > regAccess cpu b
     then 1
     else 0
 instruct cpu EQIR a b c =
   regWrite cpu c $
-  if (a == (regAccess cpu b))
+  if a == regAccess cpu b
     then 1
     else 0
 instruct cpu EQRI a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) == b)
+  if regAccess cpu a == b
     then 1
     else 0
 instruct cpu EQRR a b c =
   regWrite cpu c $
-  if ((regAccess cpu a) == (regAccess cpu b))
+  if regAccess cpu a == regAccess cpu b
     then 1
     else 0
 
 instruct' :: CPU -> Instruction -> CPU
 instruct' cpu (op, a, b, c) =
   let cpu' = instruct cpu (byOpCode op) a b c
-      ipNum = (ip cpu')
-   in regWrite cpu' ipNum $ (succ (regAccess cpu' ipNum))
+      ipNum = ip cpu'
+   in regWrite cpu' ipNum (succ (regAccess cpu' ipNum))
 
 lookup' :: [a] -> Int -> Maybe a
 lookup' xs n
@@ -170,7 +168,7 @@ execute prog cpu =
         Just instruction' -> execute prog (instruct' cpu instruction')
 
 -- Parser Stuff
-input = parseFromFile (inputParser) "AOC19.input"
+input = parseFromFile inputParser "AOC19.input"
 
 fromRight :: Show a => Either a b -> b
 fromRight (Right b) = b
@@ -179,17 +177,17 @@ fromRight (Left e)  = error $ show e
 inputParser :: Parser (Int, Program)
 inputParser = do
   ip <- string "#ip " *> number <* many space
-  program <- (many instructionParser)
+  program <- many instructionParser
   pure (ip, program)
 
 instructionParser :: Parser Instruction
 instructionParser = do
-  op <- (fmap toUpper) <$> count 4 letter <* many space
+  op <- fmap toUpper <$> count 4 letter <* many space
   let opc = opCode . read $ op
   a <- fromIntegral <$> number
   b <- fromIntegral <$> number
   c <- fromIntegral <$> number
-  pure $ (opc, a, b, c)
+  pure (opc, a, b, c)
 
 type Program = [Instruction]
 
@@ -197,7 +195,7 @@ number :: Parser Int
 number = read <$> many1 digit <* many space
 
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f = \(a, b, c) -> f a b c
+uncurry3 f (a, b, c) = f a b c
 
 --993
 solution1 = do

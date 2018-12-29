@@ -2,7 +2,9 @@
 
 module AOC24 where
 
+import           Data.Functor
 import           Data.List
+import           Data.Ord
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
@@ -36,7 +38,7 @@ instance Show Group where
     show (initiative g) ++ " contains " ++ show (units g) ++ " units"
 
 instance Eq Group where
-  g == g' = (initiative g) == (initiative g')
+  g == g' = initiative g == initiative g'
 
 instance Ord Group where
   compare g g' =
@@ -72,32 +74,30 @@ data BattleField = BattleField
   } deriving (Show)
 
 effectivePower :: Group -> AttackPoints
-effectivePower g = (damage g) * (units g)
+effectivePower g = damage g * units g
 
 isImmune :: Group -> Attack -> Bool
-isImmune (Group {immune = gi}) sa = any (== sa) gi
+isImmune Group {immune = gi} sa = sa `elem` gi
 
 isWeak :: Group -> Attack -> Bool
-isWeak (Group {weak = gw}) sa = any (== sa) gw
+isWeak Group {weak = gw} sa = sa `elem` gw
 
 strike :: Group -> Group -> Strike
 strike attacker defender =
-  let attackType = (attack attacker)
-      damageMulti =
-        if isWeak defender attackType
-          then (* 2)
-          else if isImmune defender attackType
-                 then (* 0)
-                 else (* 1)
+  let attackType = attack attacker
+      damageMulti
+        | isWeak defender attackType = (* 2)
+        | isImmune defender attackType = (* 0)
+        | otherwise = (* 1)
       damagePower = damageMulti (effectivePower attacker)
    in Strike damagePower attacker defender
 
 performStrike :: Strike -> Maybe Group
 performStrike s =
-  let g = (target s)
+  let g = target s
       damagePower = strikePower s
-      dead = damagePower `div` (hitPoints g)
-      unitsAfterAttack = (units g) - dead
+      dead = damagePower `div` hitPoints g
+      unitsAfterAttack = units g - dead
    in if unitsAfterAttack <= 0
         then Nothing
         else pure $ g {units = unitsAfterAttack}
@@ -108,23 +108,23 @@ headMaybe a  = Just $ head a
 
 select :: Group -> [Group] -> Maybe Strike
 select g targets =
-  headMaybe . reverse . sort . filter ((> 0) . strikePower) $
+  headMaybe . sortOn Data.Ord.Down . filter ((> 0) . strikePower) $
   (strike g <$> targets)
 
 dropTarget :: Strike -> [Group] -> [Group]
-dropTarget (Strike {target = t}) g = filter (/= t) g
+dropTarget Strike {target = t} g = filter (/= t) g
 
 targetSelection :: BattleField -> [Strike]
 targetSelection bf =
-  let attackers = reverse . sort $ infection bf
-      defenders = reverse . sort $ immuneSystem bf
+  let attackers = sortOn Data.Ord.Down $ infection bf
+      defenders = sortOn Data.Ord.Down $ immuneSystem bf
       ts (strikes, defenders) a =
         case select a defenders of
           Just s  -> (s : strikes, dropTarget s defenders)
           Nothing -> (strikes, defenders)
    in sortOn (initiative . attacker) $
-      (fst $ foldl ts ([], defenders) attackers) ++
-      (fst $ foldl ts ([], attackers) defenders)
+      fst (foldl ts ([], defenders) attackers) ++
+      fst (foldl ts ([], attackers) defenders)
 
 find' :: Eq a => a -> [a] -> a
 find' a' [] = error "should have found a'"
@@ -159,7 +159,7 @@ updateImmune bf g = bf {immuneSystem = g}
 
 updateArmies :: ([Group] -> BattleField) -> [Group] -> Strike -> BattleField
 updateArmies up g s =
-  let t = (target s)
+  let t = target s
    in case performStrike s of
         Nothing -> up (filter (/= t) g)
         Just survivor ->
@@ -194,25 +194,24 @@ number = read <$> many1 digit <* many space
 
 attackTypeParser :: Parser Attack
 attackTypeParser =
-  do string "radiation" *> return Radiation
-     <|> string "bludgeoning" *> return Bludgeon <|>
-  string "fire" *> return Fire <|>
-  string "cold" *> return Ice <|>
-  string "slashing" *> return Slash
+  string "radiation" Data.Functor.$> Radiation <|>
+  string "bludgeoning" Data.Functor.$> Bludgeon <|>
+  string "fire" Data.Functor.$> Fire <|>
+  string "cold" Data.Functor.$> Ice <|>
+  string "slashing" Data.Functor.$> Slash
 
 specialTratesParser :: Parser ([Attack], [Attack])
 specialTratesParser = do
   _ <- string "("
   immune <-
-    (string "immune to " *> (attackTypeParser `sepBy` (string ", "))) <|>
+    (string "immune to " *> (attackTypeParser `sepBy` string ", ")) <|>
     return []
   _ <- string "; " <|> return []
   weak <-
-    (string "weak to " *> (attackTypeParser `sepBy` (string ", "))) <|>
-    return []
+    (string "weak to " *> (attackTypeParser `sepBy` string ", ")) <|> return []
   _ <- string "; " <|> return []
   immune' <-
-    (string "immune to " *> (attackTypeParser `sepBy` (string ", "))) <|>
+    (string "immune to " *> (attackTypeParser `sepBy` string ", ")) <|>
     return []
   _ <- string ")" <* many space
   pure (immune ++ immune', weak)
@@ -243,9 +242,9 @@ battleFieldParser = do
   infect <- string "Infection:" *> many space *> many groupParser <* many space
   pure $ BattleField {immuneSystem = immune, infection = infect}
 
-input = parseFromFile (battleFieldParser) "AOC24.input"
+input = parseFromFile battleFieldParser "AOC24.input"
 
-input' = parseFromFile (battleFieldParser) "example.txt"
+input' = parseFromFile battleFieldParser "example.txt"
 
 fromRight :: Show a => Either a b -> b
 fromRight (Right b) = b
