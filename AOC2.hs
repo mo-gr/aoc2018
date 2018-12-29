@@ -1,11 +1,12 @@
 module AOC2 where
 
 import           Data.List
+import           Data.Maybe
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
-inputParser :: Parser [[Char]]
-inputParser = many (many1 letter <* (skipMany space))
+inputParser :: Parser [String]
+inputParser = many (many1 letter <* skipMany space)
 
 input = do
   x <- parseFromFile inputParser "AOC2.input"
@@ -37,8 +38,7 @@ checksum input =
    in doubles * triples
 
 -- 6225
-solution1 = do
-  checksum <$> input
+solution1 = checksum <$> input
 
 difference :: String -> String -> Int
 difference = difference' 0
@@ -46,9 +46,9 @@ difference = difference' 0
     difference' d [] other = d + length other
     difference' d other [] = d + length other
     difference' d (x:xs) (y:ys) =
-      case x == y of
-        True  -> difference' d xs ys
-        False -> difference' (d + 1) xs ys
+      if x == y
+        then difference' d xs ys
+        else difference' (d + 1) xs ys
 
 leastDiff :: [String] -> Maybe (String, String)
 leastDiff [] = Nothing
@@ -58,14 +58,9 @@ leastDiff (x:xs) =
     (x', _):_ -> Just (x, x')
 
 removeDiff :: (String, String) -> String
-removeDiff (x, y) = map fst $ filter (\(x, y) -> x == y) $ zip x y
+removeDiff (x, y) = map fst $ filter (uncurry (==)) $ zip x y
 
 -- revtaubfniyhsgxdoajwkqilp
 solution2 = do
   x <- leastDiff <$> input
-  result <-
-    pure $
-    case x of
-      Nothing -> ""
-      Just x  -> removeDiff x
-  pure result
+  pure $ removeDiff $ fromMaybe undefined x
