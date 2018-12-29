@@ -199,11 +199,12 @@ number = read <$> many1 digit <* many space
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f = \(a, b, c) -> f a b c
 
+--993
 solution1 = do
   (ip, prog) <- fromRight <$> input
   let cpu = CPU ip 0 0 0 0 0 0
   let cpu' = execute prog cpu
-  pure cpu'
+  pure . regA $ cpu'
 
 solution2 = do
   (ip, prog) <- fromRight <$> input

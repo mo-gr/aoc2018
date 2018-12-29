@@ -272,10 +272,8 @@ boost bf b =
 -- CORRECT 21765
 solution1 = do
   bf <- fromRight <$> input
-  print bf
   --debugUntil peace battle bf
   let aftermath = until peace battle bf
-  print aftermath
   pure . value $ aftermath
 
 -- CORRECT 5522
@@ -284,5 +282,4 @@ solution2 = do
   let bf' = boost bf 119
   --debugUntil peace battle bf
   let aftermath = until peace battle bf'
-  print aftermath
   pure . value $ aftermath

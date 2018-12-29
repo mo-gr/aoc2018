@@ -2,24 +2,24 @@
 {-# LANGUAGE DeriveFoldable             #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveTraversable          #-}
-{-# LANGUAGE FunctionalDependencies     #-}
+
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures             #-}
+
 {-# LANGUAGE MultiParamTypeClasses      #-}
 
+-- based on ideas from https://www.reddit.com/r/haskell/comments/a2vnni/a_better_comonad_for_cellular_automata/
 module AOC18 where
 
 import           Data.Foldable
--- based on ideas from https://www.reddit.com/r/haskell/comments/a2vnni/a_better_comonad_for_cellular_automata/
+import           Data.Functor
 import           Data.Sequence          as S
-
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
 tileParser :: Parser Tile
 tileParser =
-  (string "." *> return Open) <|> (string "|" *> return Tree) <|>
-  (string "#" *> return Lumber)
+  (string "." Data.Functor.$> Open) <|> (string "|" Data.Functor.$> Tree) <|>
+  (string "#" Data.Functor.$> Lumber)
 
 lineParser :: Parser (S.Seq Tile)
 lineParser = fromList <$> (count worldSize tileParser <* many space)
@@ -30,7 +30,7 @@ worldParser = do
   pure $ World world
 
 --input = fromRight makeOpenWorld <$> parseFromFile (worldParser) "example.txt"
-input = fromRight makeOpenWorld <$> parseFromFile (worldParser) "AOC18.input"
+input = fromRight makeOpenWorld <$> parseFromFile worldParser "AOC18.input"
 
 fromRight :: b -> Either a b -> b
 fromRight _ (Right b) = b
@@ -47,17 +47,17 @@ instance Show Tile where
   show Tree   = "|"
   show Lumber = "#"
 
-data Axis
-  = X
-  | Y
+newtype CoordX = CoordX
+  { _x :: Int
+  } deriving (Show, Eq, Ord, Enum, Num, Real, Integral)
 
-newtype Coord (x :: Axis) = Coord
-  { getCoord :: Int
+newtype CoordY = CoordY
+  { _y :: Int
   } deriving (Show, Eq, Ord, Enum, Num, Real, Integral)
 
 data Point =
-  Point (Coord X)
-        (Coord Y)
+  Point CoordX
+        CoordY
   deriving (Show, Eq)
 
 newtype World a =
@@ -67,27 +67,20 @@ newtype World a =
 makeOpenWorld :: World Tile
 makeOpenWorld = World $ S.replicate worldSize (S.replicate worldSize Open)
 
-class Functor c =>
-      CA p c
-  | c -> p
-  where
-  peek :: p -> c a -> a
-  evolve :: (p -> c a -> b) -> c a -> c b
+peek (Point x y) (World w) =
+  let t = S.index (S.index w (fromIntegral y)) (fromIntegral x)
+   in t
 
-instance CA Point World where
-  peek (Point x y) (World w) =
-    let t = S.index (S.index w (fromIntegral y)) (fromIntegral x)
-     in t `seq` t
-  evolve rule world =
-    World $
-    S.fromFunction worldSize $ \row ->
-      S.fromFunction worldSize $ \col ->
-        rule (Point (Coord col) (Coord row)) world
+evolve rule world =
+  World $
+  S.fromFunction worldSize $ \row ->
+    S.fromFunction worldSize $ \col ->
+      rule (Point (CoordX col) (CoordY row)) world
 
 ruleSet :: Point -> World Tile -> Tile
 ruleSet p w =
   let adjacentTiles :: S.Seq Tile
-      adjacentTiles = (\a -> peek a w) <$> adjacent p
+      adjacentTiles = (`peek` w) <$> adjacent p
    in case peek p w of
         Open ->
           if S.length (S.filter (== Tree) adjacentTiles) >= 3
@@ -105,7 +98,10 @@ ruleSet p w =
 
 adjacent :: Point -> S.Seq Point
 adjacent (Point x y) =
-  S.filter (\(Point x y) -> x < worldSize && x >= 0 && y < worldSize && y >= 0) $
+  S.filter
+    (\(Point x y) ->
+       x < fromIntegral worldSize &&
+       x >= 0 && y < fromIntegral worldSize && y >= 0) $
   fromList
     [ Point (x - 1) (y - 1)
     , Point x (y - 1)
@@ -117,12 +113,9 @@ adjacent (Point x y) =
     , Point (x + 1) (y + 1)
     ]
 
-w' = evolve ruleSet makeOpenWorld
-
 render :: World Tile -> IO ()
-render (World w) = do
-  sequence $ putStrLn <$> (\line -> mconcat (show <$> toList line)) <$> w
-  pure ()
+render (World w) =
+  sequence_ $ putStrLn . (\line -> mconcat (show <$> toList line)) <$> w
 
 value :: World Tile -> Int
 value w =
@@ -130,16 +123,17 @@ value w =
       lumberCount = Prelude.length $ Prelude.filter (== Lumber) (toList w)
    in treeCount * lumberCount
 
+worldSize :: Int
 worldSize = 50
 
 times :: Int -> (a -> a) -> a -> a
-times n f a = foldl' (\a _ -> f a) a [0 .. n]
+times n f a = foldl' (\a _ -> f a) a [0 .. (pred n)]
 
 -- 558960
 solution1 = do
   world <- input
   let target = times 10 (evolve ruleSet) world
-  render target
+  --render target
   pure $ value target
 
 -- something here leaks like a sieve
