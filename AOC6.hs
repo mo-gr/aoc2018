@@ -58,7 +58,7 @@ infinity = do
   zero' <- zero
   finity' <- finity
   world' <- fromList <$> world
-  pure $
+  pure
     [ Coord x' y'
     | x' <- [(x zero' - 1) .. (x finity' + 1)]
     , y' <- [(y zero' - 1) .. (y finity' + 1)]
@@ -68,7 +68,7 @@ infinity = do
 world = do
   zero' <- zero
   finity' <- finity
-  pure $
+  pure
     [ Coord x' y'
     | x' <- [(x zero') .. (x finity')]
     , y' <- [(y zero') .. (y finity')]
@@ -76,7 +76,7 @@ world = do
 
 findClosest :: [Coord] -> Coord -> Maybe Coord
 findClosest candidates point =
-  firstOrNothing $ (sortOn snd) $ zip candidates $ distance point <$> candidates
+  firstOrNothing $ sortOn snd $ zip candidates $ distance point <$> candidates
   where
     firstOrNothing ((_, x):((_, y):more))
       | x == y = Nothing
@@ -89,16 +89,18 @@ findDistSum candidates point = sum $ distance point <$> candidates
       | x == y = Nothing
     firstOrNothing ((c, x):more) = Just c
 
+--3969
 solution1 = do
   coords <- input
   w <- world
   outside <- infinity
   let closest = fmap (findClosest coords) w
-  let infinites = catMaybes $ fmap (findClosest coords) outside
-  let finites = filter (\c -> notElem c infinites) coords
+  let infinites = mapMaybe (findClosest coords) outside
+  let finites = filter (`notElem` infinites) coords
   let areas = (\c -> length $ filter (== Just c) closest) <$> finites
   pure $ maximum areas
 
+-- 42123
 solution2 = do
   let threshold = 10000
   coords <- input
