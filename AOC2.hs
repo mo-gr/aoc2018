@@ -36,6 +36,7 @@ checksum input =
       triples = length $ filter isTriple input
    in doubles * triples
 
+-- 6225
 solution1 = do
   checksum <$> input
 
@@ -59,6 +60,7 @@ leastDiff (x:xs) =
 removeDiff :: (String, String) -> String
 removeDiff (x, y) = map fst $ filter (\(x, y) -> x == y) $ zip x y
 
+-- revtaubfniyhsgxdoajwkqilp
 solution2 = do
   x <- leastDiff <$> input
   result <-
