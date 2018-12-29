@@ -141,10 +141,15 @@ play g = do
   endState <- untilM isFinished gameRound (pure startState)
   pure $ maximum (scores endState)
 
+--399645
+solution1 :: IO Score
 solution1 = do
   let res = runST $ play input
   pure res
 
+--3352507536
+solution2 :: IO Score
 solution2 = do
+  putStrLn "Warning: This will take a bit"
   let res = runST $ play legendaryInput
   pure res
