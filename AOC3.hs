@@ -69,12 +69,14 @@ filterIntersecting orig (x:xs) =
     Nothing -> [x]
     Just x  -> filterIntersecting orig xs
 
+--113716
 solution1 = do
   claims <- fromRight [] <$> input
   let allCoords = sort . mconcat $ toList . coords <$> claims
-  pure $ length . (filter (>= 2)) . (fmap length) . group $ allCoords
+  pure $ length . filter (>= 2) . fmap length . group $ allCoords
 
+--742
 solution2 = do
   claims <- fromRight [] <$> input
-  claim <- pure $ filterIntersecting claims claims
+  let claim = filterIntersecting claims claims
   return $ claimNumber (head claim)
