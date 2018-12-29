@@ -50,6 +50,7 @@ value (Node m c) = sum $ findReferenced <$> m
     findReferenced m =
       sum $ value <$> snd <$> filter ((== m) . fst) (zip [1 ..] c)
 
+--36627
 solution1 = do
   parseResult <- input
   license <-
@@ -58,6 +59,7 @@ solution1 = do
       Right l -> pure l
   pure $ sumOfMeta license
 
+--16695
 solution2 = do
   parseResult <- input
   license <-
