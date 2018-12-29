@@ -2,6 +2,7 @@
 
 module AOC12 where
 
+import           Data.Functor
 import           Data.List
 import           Data.Maybe
 import           Data.Monoid
@@ -9,7 +10,7 @@ import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
 --input = fromRight mempty <$> parseFromFile (inputParser) "example.txt"
-input = fromRight mempty <$> parseFromFile (inputParser) "AOC12.input"
+input = fromRight mempty <$> parseFromFile inputParser "AOC12.input"
 
 fromRight :: b -> Either a b -> b
 fromRight _ (Right b) = b
@@ -26,7 +27,7 @@ instance Show PlantState where
 
 newtype Plants = Plants
   { unPlants :: [PlantState]
-  } deriving (Eq, Monoid)
+  } deriving (Eq, Monoid, Semigroup)
 
 instance Show Plants where
   show (Plants state) = mconcat $ show <$> state
@@ -37,13 +38,13 @@ data Rule = Rule
   } deriving (Show, Eq)
 
 aliveParser :: Parser PlantState
-aliveParser = string "#" *> return Alive
+aliveParser = string "#" Data.Functor.$> Alive
 
 deadParser :: Parser PlantState
-deadParser = string "." *> return Dead
+deadParser = string "." Data.Functor.$> Dead
 
 plantState :: Parser PlantState
-plantState = (aliveParser <|> deadParser)
+plantState = aliveParser <|> deadParser
 
 plantParser :: Parser Plants
 plantParser = do
@@ -64,14 +65,14 @@ inputParser = do
   return (initialState, rules)
 
 rightPad :: [PlantState] -> [PlantState]
-rightPad p = p <> cycle [Dead]
+rightPad p = p <> repeat Dead
 
 tick :: [Rule] -> Plants -> Plants
 tick rules (Plants plants) =
   Plants $
   take (length plants) $
   [Dead, Dead] <>
-  ((applyRules rules) <$>
+  (applyRules rules <$>
    zip5
      plants
      (drop 1 $ rightPad plants)
@@ -84,8 +85,7 @@ applyRules ::
   -> (PlantState, PlantState, PlantState, PlantState, PlantState)
   -> PlantState
 applyRules rules (a, b, c, d, e) =
-  fromMaybe Dead $
-  find ((== [a, b, c, d, e]) . constellation) rules >>= pure . result
+  maybe Dead result $ find ((== [a, b, c, d, e]) . constellation) rules
 
 plantValue :: Plants -> Int
 plantValue (Plants plants) =
