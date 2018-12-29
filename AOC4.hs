@@ -3,6 +3,7 @@ module AOC4 where
 import           Data.Hourglass
 import           Data.List
 import qualified Data.Map.Strict        as M
+import           Data.Ord
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 import           Time.Types
@@ -73,16 +74,16 @@ data SleepLog = SleepLog
 
 instance Show SleepLog where
   show (SleepLog g s w) =
-    (show g) ++
+    show g ++
     ": " ++
     (show . todMin . dtTime $ s) ++ " - " ++ (show . todMin . dtTime $ w)
 
 sleepLog :: GuardNum -> DateTime -> DateTime -> SleepLog
-sleepLog guard start wake = SleepLog guard start wake
+sleepLog = SleepLog
 
 convertToSleepLog :: [Message] -> [SleepLog]
 convertToSleepLog [] = []
-convertToSleepLog ms = snd $ foldr f (Nothing, []) (reverse $ sort ms)
+convertToSleepLog ms = snd $ foldr f (Nothing, []) (sortOn Data.Ord.Down ms)
   where
     f :: Message
       -> (Maybe (GuardNum, Maybe DateTime), [SleepLog])
@@ -90,7 +91,7 @@ convertToSleepLog ms = snd $ foldr f (Nothing, []) (reverse $ sort ms)
     f (ShiftStart _ guard) (_, ls) = (Just (guard, Nothing), ls)
     f (Sleep start) (Just (guard, Nothing), ls) = (Just (guard, Just start), ls)
     f (WakeUp wake) (Just (guard, Just start), ls) =
-      (Just (guard, Nothing), (sleepLog guard start wake) : ls)
+      (Just (guard, Nothing), sleepLog guard start wake : ls)
     f m s = error $ "unexpected message: " ++ show m ++ " state " ++ show s
 
 sleepMinutes :: SleepLog -> Minutes
@@ -124,22 +125,24 @@ findSleepiestMinutes log =
                (todMin . dtTime . _sleep $ l) <= m &&
                (todMin . dtTime . _wake $ l) > m)
             l)
-   in head . reverse . sortOn snd $ fmap (filterLog log) minutes
+   in (last . sortOn snd) $ fmap (filterLog log) minutes
 
+--119835
 solution1 = do
   sleepLog <- convertToSleepLog <$> input
   sleepiestGuard <-
-    pure . fst . head . reverse . sortOn snd . M.toList $
+    pure . fst . last . sortOn snd . M.toList $
     sleepTimeByGuard M.empty sleepLog
   let sleepLogOfSleepiest = filter ((== sleepiestGuard) . _guard) sleepLog
   let sleepiestMin = fst $ findSleepiestMinutes sleepLogOfSleepiest
-  pure $ sleepiestGuard * (fromIntegral sleepiestMin)
+  pure $ sleepiestGuard * fromIntegral sleepiestMin
 
+--12725
 solution2 = do
   sleepLog <- sortOn _guard . convertToSleepLog <$> input
   let sleepLogByGuard = groupBy (\l1 l2 -> _guard l1 == _guard l2) sleepLog
   let sleepiest =
         (\l -> (_guard . head $ l, findSleepiestMinutes l)) <$> sleepLogByGuard
-  let candidate = head . reverse . sortOn (snd . snd) $ sleepiest
-  print candidate
-  pure $ (fst candidate) * (fromIntegral (fst . snd $ candidate))
+  let candidate = last . sortOn (snd . snd) $ sleepiest
+  --print candidate
+  pure $ fst candidate * fromIntegral (fst . snd $ candidate)
