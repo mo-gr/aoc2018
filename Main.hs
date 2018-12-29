@@ -7,6 +7,7 @@ import qualified AOC3
 import qualified AOC4
 import qualified AOC5
 import qualified AOC6
+import qualified AOC7
 import           System.Environment
 import           System.Exit
 
@@ -32,5 +33,6 @@ main = do
     Just "4"   -> format AOC4.solution1 AOC4.solution2
     Just "5"   -> format AOC5.solution1 AOC5.solution2
     Just "6"   -> format AOC6.solution1 AOC6.solution2
+    Just "7"   -> format AOC7.solution1 AOC7.solution2
     Just "25"  -> AOC25.solution1 >>= print
     Just other -> putStrLn $ "No sulution for day " ++ show other

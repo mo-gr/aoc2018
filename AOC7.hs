@@ -16,10 +16,6 @@ import           Data.Tuple
 import           Text.Parsec
 import           Text.Parsec.ByteString (Parser, parseFromFile)
 
-fromRight :: b -> Either a b -> b
-fromRight _ (Right b) = b
-fromRight b _         = b
-
 --input = fromRight mempty <$> parseFromFile (many instructionParser) "example.txt"
 input = fromRight mempty <$> parseFromFile (many instructionParser) "AOC7.input"
 
@@ -257,6 +253,7 @@ duration :: Step -> Int
 duration s = 61 + (fromEnum s) - (fromEnum 'A')
 
 --894 off by one 893 is correct
+--893
 solution2 = do
   man <- input
   let steps = allSteps man
