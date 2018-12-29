@@ -1,4 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE TupleSections #-}
 
 module AOC7 where
 
@@ -60,7 +61,7 @@ isPrecondition man s s' =
   let direct =
         isJust $ find (liftM2 (&&) ((== s) . _cond) ((== s') . _step)) man
       pres = directPreconditions man s'
-   in direct || (or $ isPrecondition man s <$> pres)
+   in direct || or (isPrecondition man s <$> pres)
 
 compareSteps :: [Instruction] -> Step -> Step -> Ordering
 compareSteps man s s' =
@@ -129,8 +130,7 @@ data StateStep = StateStep
 
 candidates :: [Instruction] -> S.Set Step -> S.Set Step -> S.Set Step
 candidates man compl blocked =
-  let follows =
-        S.fromList $ mconcat $ (\c -> directFollow man c) <$> S.toList compl
+  let follows = S.fromList $ mconcat $ directFollow man <$> S.toList compl
       availableFollows = S.filter (`S.member` blocked) follows
    in S.filter
         (\f -> allPreconditions man f `S.isSubsetOf` compl)
@@ -140,7 +140,7 @@ next :: [Instruction] -> StateStep -> StateStep
 next man (StateStep d [] []) = StateStep d [] []
 next man (StateStep _ [] _) = error "Something went bad"
 next man (StateStep c a b) =
-  let c' = c ++ [(head . sort $ a)]
+  let c' = c ++ [minimum a]
       newAvail = candidates man (S.fromList c') (S.fromList b)
       a' = (drop 1 . sort $ a) ++ S.toList newAvail
       b' = filter (`S.notMember` newAvail) b
@@ -180,12 +180,12 @@ data SchedulerState = SchedulerState
 --  show s = show $ completed s
 finished :: SchedulerState -> Bool
 finished s =
-  (S.null $ avail s) && (S.null $ block s) && (S.null $ busyWorkers s) ||
+  S.null (avail s) && S.null (block s) && S.null (busyWorkers s) ||
   (currentTime s > 1000)
 
 untilFinished :: SchedulerState -> Reader [Instruction] SchedulerState
 untilFinished s
-  | finished s = pure $ s
+  | finished s = pure s
 untilFinished !s = do
   next <- tick s
   untilFinished next
@@ -198,14 +198,14 @@ initialScheduler steps workerCount =
         mempty
         (fromList steps)
         0
-        (fromList $ (flip (,) $ Nothing) <$> [0 .. workerCount])
+        (fromList $ (, Nothing) <$> [0 .. workerCount])
         empty
 
 nextAvailable :: [Step] -> Set Step -> Reader [Instruction] (Set Step)
 nextAvailable compl blocked = do
   man <- ask
-  let follows = S.fromList $ mconcat $ (\c -> directFollow man c) <$> compl
-  let free = S.filter (\s -> S.null $ allPreconditions man s) blocked
+  let follows = S.fromList $ mconcat $ directFollow man <$> compl
+  let free = S.filter (S.null . allPreconditions man) blocked
   let complSet = fromList compl
   let availableFollows = free <> S.filter (`S.member` blocked) follows
   pure $
@@ -219,12 +219,12 @@ tick s = do
       finishedWorkers = doneWorkers updatedWorkers
       workingWorkers' = workingWorkers updatedWorkers
       completed' =
-        (completed s) <> (sort $ catMaybes $ snd <$> (S.toList finishedWorkers))
-  nextAvail <- (nextAvailable completed' (block s))
-  let avail' = nextAvail <> (avail s)
+        completed s <> sort (catMaybes $ snd <$> S.toList finishedWorkers)
+  nextAvail <- nextAvailable completed' (block s)
+  let avail' = nextAvail <> avail s
       block' = S.difference (block s) avail'
       time' = succ $ currentTime s
-      freeWorkers' = (freeWorkers s) <> finishedWorkers
+      freeWorkers' = freeWorkers s <> finishedWorkers
       (remainaing, starters) = scheduleWorkers freeWorkers' avail'
       busyWorkers' = workingWorkers' <> starters
       freeWorkers'' = S.difference freeWorkers' (S.map fst starters)
@@ -235,7 +235,7 @@ doneWorkers :: Set (Worker, Int) -> Set Worker
 doneWorkers bw = fst `S.map` S.filter ((== 0) . snd) bw
 
 workingWorkers :: Set (Worker, Int) -> Set (Worker, Int)
-workingWorkers bw = S.filter ((/= 0) . snd) bw
+workingWorkers = S.filter ((/= 0) . snd)
 
 scheduleWorkers :: Set Worker -> Set Step -> (Set Step, Set (Worker, Int))
 scheduleWorkers freeWorkers availableSteps =
@@ -244,13 +244,12 @@ scheduleWorkers freeWorkers availableSteps =
     else let w = toList freeWorkers
              s = sort $ toList availableSteps
              schedule =
-               (\(w, step) -> (const (Just step) <$> w, duration step)) <$>
-               zip w s
+               (\(w, step) -> (Just step <$ w, duration step)) <$> zip w s
              remaining = fromList $ drop (length schedule) s
           in (remaining, fromList schedule)
 
 duration :: Step -> Int
-duration s = 61 + (fromEnum s) - (fromEnum 'A')
+duration s = 61 + fromEnum s - fromEnum 'A'
 
 --894 off by one 893 is correct
 --893
