@@ -25,34 +25,31 @@ number = read <$> many1 digit
 parsePlus :: Parser Op
 parsePlus = do
   _ <- string "+"
-  x <- number
-  pure $ Plus x
+  Plus <$> number
 
 parseMinus :: Parser Op
 parseMinus = do
   _ <- string "-"
-  x <- number
-  pure $ Minus x
+  Minus <$> number
 
-parseOp = many1 ((parsePlus <|> parseMinus) <* (skipMany space))
+parseOp = many1 ((parsePlus <|> parseMinus) <* skipMany space)
 
 test = "+7 +7 -2 -7 -4"
 
 foldOps :: Frequency -> [Op] -> Frequency
-foldOps f []       = f
-foldOps f (op:ops) = foldOps (apply f op) ops
+foldOps = Prelude.foldl apply
 
 apply :: Frequency -> Op -> Frequency
-apply f (Plus a)  = f + (Frequency a)
-apply f (Minus a) = f - (Frequency a)
+apply f (Plus a)  = f + Frequency a
+apply f (Minus a) = f - Frequency a
 
 detectDoubleFreq :: Set Frequency -> Frequency -> [Op] -> Reader [Op] Frequency
 detectDoubleFreq seen f [] = ask >>= detectDoubleFreq seen f
 detectDoubleFreq seen f (op:ops) =
   let f' = foldOps f [op]
-   in case (member f' seen) of
-        True  -> pure f'
-        False -> detectDoubleFreq (insert f' seen) f' ops
+   in if member f' seen
+        then pure f'
+        else detectDoubleFreq (insert f' seen) f' ops
 
 --561
 solution1 :: IO Frequency
