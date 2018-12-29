@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE RecordWildCards            #-}
+
 
 module AOC10 where
 
@@ -85,7 +85,7 @@ tick cvs = move <$> cvs
 
 --toPlot (time, cs) = sequence $ putStrLn <$> (\((Coord cx cy),_) -> --(show cx) ++ ", " ++ (show cy) ++ ", " ++ (show time)) <$> cs
 toSprite :: Star -> Node nodeData
-toSprite ((Coord (X x) (Y y)), _) =
+toSprite (Coord (X x) (Y y), _) =
   whitePixel (fromIntegral x) (fromIntegral (height - y))
 
 -- ZNNRZJXP
@@ -122,8 +122,8 @@ data AOC10UserData = AOC10UserData
 updateScene scene@Scene {sceneData = d} _ =
   scene
     { sceneChildren =
-        (labelNodeWithText $ "   Time: " ++ show (time d)) :
-        (toSprite <$> (stars d))
+        labelNodeWithText ("   Time: " ++ show (time d)) :
+        (toSprite <$> stars d)
     }
 
 advance :: EventHandler AOC10UserData

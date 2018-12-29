@@ -38,5 +38,6 @@ main = do
     Just "7"   -> format AOC7.solution1 AOC7.solution2
     Just "8"   -> format AOC8.solution1 AOC8.solution2
     Just "9"   -> format AOC9.solution1 AOC9.solution2
+    Just "10"  -> putStrLn "This solution uses SpriteKit and thus requires Haskell for Mac (http://haskellformac.com). Just put the source and input in a new project and write 'solution1' or 'solution2' in the playground."
     Just "25"  -> AOC25.solution1 >>= print
     Just other -> putStrLn $ "No sulution for day " ++ show other
